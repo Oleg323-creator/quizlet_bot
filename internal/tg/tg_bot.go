@@ -3,6 +3,7 @@ package tg
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sirupsen/logrus"
+	"quizlet_bot/internal/domain/models/db_models"
 )
 
 func (t *TgBot) Bot() (*tgbotapi.BotAPI, error) {
@@ -51,11 +52,15 @@ func (t *TgBot) Bot() (*tgbotapi.BotAPI, error) {
 						t.botTg.Send(msg)
 					case "choose_topic":
 						logrus.Info("Got /choose_topic command")
+
+						userStates[update.Message.Chat.ID] = "choosing_topic"
+
 						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Choose topic")
 						t.botTg.Send(msg)
 					case "create_topic":
 						logrus.Info("Got /create_topic command")
-						userStates[update.Message.Chat.ID] = "waiting_for_address" //saiving status
+
+						userStates[update.Message.Chat.ID] = "creating_topic" //saiving status
 
 						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Enter topic name")
 						t.botTg.Send(msg)
@@ -63,19 +68,30 @@ func (t *TgBot) Bot() (*tgbotapi.BotAPI, error) {
 						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Unknown command")
 						t.botTg.Send(msg)
 					}
-					/*	} else if userState, exists := userStates[update.Message.Chat.ID]; exists {
+				} else if userState, exists := userStates[update.Message.Chat.ID]; exists {
+					if userState == "choosing_topic" {
+						topic := update.Message.Text
+						logrus.Infof("Topic chousen: %s", topic)
 
-						if userState == "waiting_for_address" {
+						data := db_models.Topics{
+							Topic: topic,
+							TgId: update.Message.From.ID,
+						}
 
-							addr := update.Message.Text
-							logrus.Infof("Received address from user: %s", addr)
-							if len(addr) != 34 {
-								confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Incorrect address")
-								t.BotTg.Send(confirmationMsg)
-								continue
-							}
+						words, err := t.usecases.ChooseTopic(data)
+						if err != nil {
+							logrus.Info("")
+							return nil, err
+						}
 
-							stats, err := t.StatsForTg(addr)
+
+						if len(addr) != 34 {
+							confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Incorrect address")
+							t.botTg.Send(confirmationMsg)
+							continue
+						}
+
+						/*	stats, err := t.StatsForTg(addr)
 							if err != nil {
 								logrus.Infof("ERR getting stats: fro tg")
 							}
