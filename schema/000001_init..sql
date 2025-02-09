@@ -1,7 +1,9 @@
 create table if not exists users(
     id serial primary key unique,
-    chat_id integer,
-    name varchar(50) not null
+    tg_id integer unique,
+    username varchar(50) not null,
+    first_name varchar(50) not null,
+    last_name varchar(50) not null
 );
 
 create table if not exists topics(

@@ -1,3 +1,37 @@
 module quizlet_bot
 
 go 1.23.3
+
+require (
+	github.com/Masterminds/squirrel v1.5.4
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
+	github.com/jackc/pgx/v4 v4.7.1
+	github.com/jackc/tern v1.13.0
+	github.com/sirupsen/logrus v1.9.3
+)
+
+require (
+	github.com/Masterminds/goutils v1.1.0 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
+	github.com/google/uuid v1.1.1 // indirect
+	github.com/huandu/xstrings v1.3.2 // indirect
+	github.com/imdario/mergo v0.3.9 // indirect
+	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
+	github.com/jackc/pgconn v1.6.1 // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgproto3/v2 v2.0.2 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20200307190119-3430c5407db8 // indirect
+	github.com/jackc/pgtype v1.4.0 // indirect
+	github.com/jackc/puddle v1.1.1 // indirect
+	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
+	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
+	github.com/lib/pq v1.10.9 // indirect
+	github.com/mitchellh/copystructure v1.0.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.0 // indirect
+	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
+	golang.org/x/text v0.3.3 // indirect
+	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
+)
