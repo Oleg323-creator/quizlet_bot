@@ -64,6 +64,7 @@ func (t *TgBot) Bot() (*tgbotapi.BotAPI, error) {
 
 						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Enter topic name")
 						t.botTg.Send(msg)
+
 					default:
 						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Unknown command")
 						t.botTg.Send(msg)
@@ -75,31 +76,52 @@ func (t *TgBot) Bot() (*tgbotapi.BotAPI, error) {
 
 						data := db_models.Topics{
 							Topic: topic,
-							TgId: update.Message.From.ID,
+							TgId:  update.Message.From.ID,
 						}
 
-						words, err := t.usecases.ChooseTopic(data)
+						_, err := t.usecases.ChooseTopic(data)
 						if err != nil {
 							logrus.Info("")
 							return nil, err
 						}
 
-
-						if len(addr) != 34 {
+						/*	if len(addr) != 34 {
 							confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Incorrect address")
 							t.botTg.Send(confirmationMsg)
 							continue
+						}*/
+
+					} else if userState == "creating_topic" {
+						//topic := update.Message.Text
+
+						msg := tgbotapi.NewMessage(update.Message.Chat.ID,
+							"Add words to the topic(word-translate)")
+
+						keyboard := tgbotapi.NewReplyKeyboard(
+							tgbotapi.NewKeyboardButtonRow(
+								tgbotapi.NewKeyboardButton("Add word"),
+								tgbotapi.NewKeyboardButton("Create topic"),
+								tgbotapi.NewKeyboardButton("Cancel"),
+							))
+						msg.ReplyMarkup = keyboard
+						t.botTg.Send(msg)
+
+						userStates[update.Message.Chat.ID] = "adding words"
+						if userState == "adding words" {
+
 						}
 
-						/*	stats, err := t.StatsForTg(addr)
-							if err != nil {
-								logrus.Infof("ERR getting stats: fro tg")
-							}
+					}
 
-							confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Your stats:\n "+stats)
-							t.BotTg.Send(confirmationMsg)
+					/*	stats, err := t.StatsForTg(addr)
+						if err != nil {
+							logrus.Infof("ERR getting stats: fro tg")
+						}
 
-							delete(userStates, update.Message.Chat.ID)*/
+						confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Your stats:\n "+stats)
+						t.BotTg.Send(confirmationMsg)
+
+						delete(userStates, update.Message.Chat.ID)*/
 				}
 			}
 		}
