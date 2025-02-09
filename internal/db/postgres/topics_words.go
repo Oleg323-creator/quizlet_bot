@@ -7,18 +7,18 @@ import (
 	"github.com/sirupsen/logrus"
 	"log"
 	"quizlet_bot/internal/db"
-	"quizlet_bot/internal/domain/models"
+	"quizlet_bot/internal/domain/models/db_models"
 )
 
-type TopicsPostgres struct {
+type TopicsAndWordsPostgres struct {
 	db *db.WrapperDB
 }
 
-func NewMTopicsPostgres(db *db.WrapperDB) *TopicsPostgres {
-	return &TopicsPostgres{db: db}
+func NewTopicsAndWordsPostgres(db *db.WrapperDB) *TopicsAndWordsPostgres {
+	return &TopicsAndWordsPostgres{db: db}
 }
 
-func (r *TopicsPostgres) AddTopic(topic models.Topics, words []models.Words) error {
+func (r *TopicsAndWordsPostgres) AddTopic(topic db_models.Topics, words []db_models.Words) error {
 
 	//using TX to add data to both tables(topics and words)
 
@@ -43,12 +43,14 @@ func (r *TopicsPostgres) AddTopic(topic models.Topics, words []models.Words) err
 	query, args, err := sq.Insert("topics").
 		Columns("topic", "user_id").
 		Select(
-			sq.Select(sq.Expr("?", topic.Topic), "u.id").
+			sq.Select("u.id").
 				From("users u").
-				Where(squirrel.Eq{"u.tg_id": topic.TgId}).
-				Suffix("ON CONFLICT (topic, user_id) DO NOTHING"),
+				Where(squirrel.Eq{"u.tg_id": topic.TgId}),
 		).
+		Suffix("ON CONFLICT (topic, user_id) DO NOTHING").
 		ToSql()
+
+	args = append([]interface{}{topic.Topic}, args...)
 
 	if err != nil {
 		logrus.Errorf("ERR building query: %v", err)
@@ -84,7 +86,7 @@ func (r *TopicsPostgres) AddTopic(topic models.Topics, words []models.Words) err
 	return nil
 }
 
-func (r *TopicsPostgres) GetTopic(data models.Topics) ([]string, error) {
+func (r *TopicsAndWordsPostgres) ChooseTopic(data db_models.Topics) ([]string, error) {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	query, args, err := sq.Select("*").
@@ -136,7 +138,7 @@ func (r *TopicsPostgres) GetTopic(data models.Topics) ([]string, error) {
 }
 
 /*
-func (r *TopicsPostgres) AddTopic(data models.Topics) error {
+func (r *TopicsAndWordsPostgres) AddTopic(data models.Topics) error {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	query, args, err := sq.Insert("topics").

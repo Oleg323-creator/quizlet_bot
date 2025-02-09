@@ -7,7 +7,7 @@ import (
 	"quizlet_bot/internal/db"
 )
 
-var MigrationsDirectory = "./migrations"
+var MigrationsDirectory = "./schema"
 
 type MigratorPostgres struct {
 	db *db.WrapperDB

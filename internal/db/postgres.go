@@ -40,7 +40,6 @@ func NewPostgresDB(ctx context.Context, cfg ConnectionConfig) (*pgxpool.Pool, er
 
 // get connection from pool and release
 func getConnection(ctx context.Context, pool *pgxpool.Pool) error {
-
 	conn, err := pool.Acquire(ctx)
 
 	defer conn.Release()
@@ -49,7 +48,6 @@ func getConnection(ctx context.Context, pool *pgxpool.Pool) error {
 		logrus.Errorf("%s", err.Error())
 		return err
 	}
-
 	if err = conn.Ping(ctx); err != nil {
 		logrus.Errorf("%s", err.Error())
 		return err

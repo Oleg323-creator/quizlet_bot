@@ -4,18 +4,18 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/sirupsen/logrus"
 	"quizlet_bot/internal/db"
-	"quizlet_bot/internal/domain/models"
+	"quizlet_bot/internal/domain/models/db_models"
 )
 
-type UserPostgres struct {
+type UsersPostgres struct {
 	db *db.WrapperDB
 }
 
-func NewUsersPostgres(db *db.WrapperDB) *UserPostgres {
-	return &UserPostgres{db: db}
+func NewUsersPostgres(db *db.WrapperDB) *UsersPostgres {
+	return &UsersPostgres{db: db}
 }
 
-func (r *UserPostgres) AddUser(data models.Users) error {
+func (r *UsersPostgres) AddUser(data db_models.Users) error {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	query, args, err := sq.Insert("users").
@@ -38,14 +38,17 @@ func (r *UserPostgres) AddUser(data models.Users) error {
 
 	defer conn.Release() // Closing conn after req
 
-	_, err = conn.Exec(r.db.Ctx, query, args...)
+	ex, err := conn.Exec(r.db.Ctx, query, args...)
 	if err != nil {
 		logrus.Errorf("Error executing query: %s", err.Error())
 		return err
 	}
 
+	if ex.RowsAffected() > 0 {
+		logrus.Infof("NEW USER ADDED! Tg ID: %d", data.TgId)
+	}
+
 	_ = r.db.Pool.Stat()
 
-	logrus.Infof("NEW USER! Tg ID: %s", data.TgId)
 	return nil
 }
