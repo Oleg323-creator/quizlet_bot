@@ -54,12 +54,15 @@ func main() {
 
 	wg := &sync.WaitGroup{}
 
-	tg := tg.NewTgBot(usec, os.Getenv("BOT_TOKEN"), ctx, wg)
+	tgBot, err := tg.NewTgBot(usec, os.Getenv("BOT_TOKEN"), ctx, wg)
+	if err != nil {
+		logrus.Error(err)
+	}
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := tg.Bot()
+		_, err := tgBot.Bot()
 		if err != nil {
 			logrus.Errorf("Error running bot: %v", err)
 		}

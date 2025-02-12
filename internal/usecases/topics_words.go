@@ -14,18 +14,13 @@ func NewTopicsAndWordsUsecases(repo repo_manager.TopicsAndWordsRepository) *Topi
 }
 
 func (u *TopicsAndWordsUsecases) AddTopic(topic db_models.Topics, words []db_models.Words) error {
-	err := u.repo.AddTopic(topic, words)
-	if err != nil {
-		return err
-	}
-	return nil
+	return u.repo.AddTopic(topic, words)
 }
 
 func (u *TopicsAndWordsUsecases) ChooseTopic(data db_models.Topics) ([]string, error) {
-	words, err := u.repo.ChooseTopic(data)
-	if err != nil {
-		return nil, err
-	}
+	return u.repo.ChooseTopic(data)
+}
 
-	return words, nil
+func (u *TopicsAndWordsUsecases) TopicsList(tgId int64) ([]string, error) {
+	return u.repo.TopicsList(tgId)
 }

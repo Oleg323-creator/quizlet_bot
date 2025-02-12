@@ -15,10 +15,11 @@ type TgBot struct {
 	wg       *sync.WaitGroup
 }
 
-func NewTgBot(usecases *ucase_manager.ManagerUsecases, token string, ctx context.Context, wg *sync.WaitGroup) *TgBot {
+func NewTgBot(usecases *ucase_manager.ManagerUsecases, token string, ctx context.Context, wg *sync.WaitGroup) (*TgBot, error) {
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
-		logrus.Panic(err)
+		logrus.Error(err)
+		return nil, err
 	}
 
 	return &TgBot{
@@ -26,5 +27,5 @@ func NewTgBot(usecases *ucase_manager.ManagerUsecases, token string, ctx context
 		botTg:    bot,
 		ctx:      ctx,
 		wg:       wg,
-	}
+	}, nil
 }

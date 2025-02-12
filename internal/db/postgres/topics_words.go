@@ -137,6 +137,57 @@ func (r *TopicsAndWordsPostgres) ChooseTopic(data db_models.Topics) ([]string, e
 	return words, nil
 }
 
+func (r *TopicsAndWordsPostgres) TopicsList(tgId int64) ([]string, error) {
+	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
+
+	query, args, err := sq.Select("topic").
+		From("topics").
+		Join("users ON topics.user_id = users.id").
+		Where(squirrel.And{
+			squirrel.Eq{"users.tg_id": tgId},
+		}).
+		ToSql()
+
+	if err != nil {
+		logrus.Errorf("ERR creating quiery Get Topic")
+		return nil, err
+	}
+
+	conn, err := r.db.Pool.Acquire(r.db.Ctx)
+
+	if err != nil {
+		logrus.Errorf("ERR acquiring connection: %s", err.Error())
+		return nil, err
+	}
+
+	defer conn.Release() // Closing conn after req
+
+	rows, execErr := r.db.Pool.Query(r.db.Ctx, query, args...)
+	if execErr != nil {
+		logrus.Errorf("ERR to execute SQL query: %v", execErr)
+		return nil, execErr
+	}
+	defer rows.Close()
+
+	var topics []string
+
+	for rows.Next() {
+		var topic string
+		if err = rows.Scan(&topic); err != nil {
+			logrus.Errorf("ERR to scan result: %v", err)
+			return nil, err
+		}
+
+		topics = append(topics, topic)
+	}
+
+	if err = rows.Err(); err != nil {
+		logrus.Error(err)
+	}
+
+	return topics, nil
+}
+
 /*
 func (r *TopicsAndWordsPostgres) AddTopic(data models.Topics) error {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
