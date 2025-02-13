@@ -86,15 +86,16 @@ func (r *TopicsAndWordsPostgres) AddTopic(topic db_models.Topics, words []db_mod
 	return nil
 }
 
-func (r *TopicsAndWordsPostgres) ChooseTopic(data db_models.Topics) ([]string, error) {
+func (r *TopicsAndWordsPostgres) WordsBySetName(data db_models.Topics) ([]string, error) {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
-	query, args, err := sq.Select("*").
+	query, args, err := sq.Select("word").
 		From("words").
 		Join("topics ON words.topic_id = topics.id").
+		Join("users ON topics.user_id = users.id").
 		Where(squirrel.And{
 			squirrel.Eq{"topics.topic": data.Topic},
-			squirrel.Eq{"topics.tg_id": data.TgId},
+			squirrel.Eq{"users.tg_id": data.TgId},
 		}).
 		ToSql()
 
@@ -137,7 +138,7 @@ func (r *TopicsAndWordsPostgres) ChooseTopic(data db_models.Topics) ([]string, e
 	return words, nil
 }
 
-func (r *TopicsAndWordsPostgres) TopicsList(tgId int64) ([]string, error) {
+func (r *TopicsAndWordsPostgres) SetsList(tgId int64) ([]string, error) {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	query, args, err := sq.Select("topic").

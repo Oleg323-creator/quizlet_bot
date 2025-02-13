@@ -1,10 +1,12 @@
 package tg
 
 import (
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/looplab/fsm"
 	"github.com/sirupsen/logrus"
 	"quizlet_bot/internal/domain/models/db_models"
+	"strings"
 )
 
 type User struct {
@@ -99,6 +101,7 @@ func (t *TgBot) NewUserFSM() *User {
 				{Name: "choose_starting_option", Src: []string{"start"}, Dst: "waiting_for_starting_option"},
 
 				{Name: "choose_set", Src: []string{"waiting_for_starting_option"}, Dst: "waiting_for_choosing_set"},
+				{Name: "working_with_set", Src: []string{"waiting_for_choosing_set"}, Dst: "working_with_set"},
 
 				{Name: "create_set", Src: []string{"waiting_for_starting_option"}, Dst: "waiting_for_starting_creating"},
 				{Name: "enter_set_name", Src: []string{"waiting_for_starting_creating"}, Dst: "waiting_for_entering_name"},
@@ -136,24 +139,31 @@ func (t *TgBot) handleStart(chatID int64, user *User) {
 }
 
 func (t *TgBot) handleUserResponse(chatID int64, user *User, text string) {
-	switch text {
-	case "choose_set":
-		keyboard, err := t.ChooseSetUserResponse(chatID, user)
+	switch {
+	case strings.HasPrefix(text, "choose_set"):
+		err := t.ChooseSetUserResponse(chatID, user)
 		if err != nil {
-			logrus.Errorf("ERR choosing set: %v", err)
+			logrus.Error(err)
 		}
 
-		msg := tgbotapi.NewMessage(chatID, "Choose set:")
+	case strings.HasPrefix(text, "set_was_chosen"):
+		err := t.WordsBySetName(chatID, user, text)
+		if err != nil {
+			logrus.Error(err)
+		}
 
-		msg.ReplyMarkup = keyboard
-		t.botTg.Send(msg)
+	case strings.HasPrefix(text, "i"):
+		err := t.WordsBySetName(chatID, user, text)
+		if err != nil {
+			logrus.Error(err)
+		}
 
-	case "create_set":
+	case strings.HasPrefix(text, "create_set"):
 		logrus.Info("create_set")
 
 		user.FSM.Event(t.ctx, "waiting_for_starting_creating")
 
-		_, err := t.usecases.TopicsList(chatID)
+		_, err := t.usecases.SetsList(chatID)
 		if err != nil {
 			logrus.Errorf("ERR choosing topic")
 			msg := tgbotapi.NewMessage(chatID, "There is no such set ")
@@ -163,13 +173,13 @@ func (t *TgBot) handleUserResponse(chatID int64, user *User, text string) {
 		msg := tgbotapi.NewMessage(chatID, "")
 		t.botTg.Send(msg)
 
-	case "update_set":
+	case strings.HasPrefix(text, "update_set"):
 		logrus.Info("update_set")
 		user.FSM.Event(t.ctx, "ask_age") // Переход в ожидание возраста
 		msg := tgbotapi.NewMessage(chatID, "Сколько тебе лет?")
 		t.botTg.Send(msg)
 
-	case "delete_set":
+	case strings.HasPrefix(text, "delete_set"):
 		logrus.Info("delete_set")
 		user.FSM.Event(t.ctx, "ask_age") // Переход в ожидание возраста
 		msg := tgbotapi.NewMessage(chatID, "Сколько тебе лет?")
@@ -182,11 +192,11 @@ func (t *TgBot) handleUserResponse(chatID int64, user *User, text string) {
 	}
 }
 
-func (t *TgBot) ChooseSetUserResponse(chatID int64, user *User) (tgbotapi.InlineKeyboardMarkup, error) {
+func (t *TgBot) ChooseSetUserResponse(chatID int64, user *User) error {
 	logrus.Info("choose_set")
 	user.FSM.Event(t.ctx, "waiting_for_choosing_set")
 
-	topics, err := t.usecases.TopicsList(chatID)
+	topics, err := t.usecases.SetsList(chatID)
 	if err != nil {
 		logrus.Errorf("ERR choosing topic")
 		msg := tgbotapi.NewMessage(chatID, "There is no such set ")
@@ -197,11 +207,11 @@ func (t *TgBot) ChooseSetUserResponse(chatID int64, user *User) (tgbotapi.Inline
 	var btnsInRowSlice []tgbotapi.InlineKeyboardButton
 
 	if len(topics) == 0 {
-		logrus.Errorf("LENTH IS 0")
-		return tgbotapi.InlineKeyboardMarkup{}, err
+		logrus.Errorf("You don't have any sets")
+		return err
 	}
 	for _, topic := range topics {
-		btnsInRowSlice = append(btnsInRowSlice, tgbotapi.NewInlineKeyboardButtonData(topic, topic))
+		btnsInRowSlice = append(btnsInRowSlice, tgbotapi.NewInlineKeyboardButtonData(topic, fmt.Sprintf("set_was_chosen"+topic)))
 
 		if len(btnsInRowSlice) > 3 {
 			keyboardSlice = append(keyboardSlice, btnsInRowSlice)
@@ -215,23 +225,58 @@ func (t *TgBot) ChooseSetUserResponse(chatID int64, user *User) (tgbotapi.Inline
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(keyboardSlice...)
 
-	return keyboard, nil
+	msg := tgbotapi.NewMessage(chatID, "Choose set:")
+
+	msg.ReplyMarkup = keyboard
+	t.botTg.Send(msg)
+
+	return nil
 }
 
-func (t *TgBot) GetWordsBySetName(chatID int64, user *User, setName string) ([]string, error) {
+func (t *TgBot) WordsBySetName(chatID int64, user *User, callback string) error {
+	logrus.Info("working_with_set")
+
+	var setName string
+	/*
+		if strings.HasPrefix(callback, "i_know") {
+			setName = strings.TrimPrefix(callback, "i_know")
+		} else if strings.HasPrefix(callback, "i_don't_know") {
+			setName = strings.TrimPrefix(callback, "i_don't_know")
+		}
+	*/
+
+	setName = strings.TrimPrefix(callback, "set_was_chosen")
+
+	user.FSM.Event(t.ctx, "working_with_set")
+
 	data := db_models.Topics{Topic: setName, TgId: chatID}
-	words, err := t.usecases.ChooseTopic(data)
+	words, err := t.usecases.WordsBySetName(data)
 	if err != nil {
-		logrus.Errorf("ERR getting words by topic: %v", err)
-		return nil, err
+		return err
 	}
+
+	for _, word := range words {
+		btn1 := tgbotapi.NewInlineKeyboardButtonData("I know", fmt.Sprintf("i_know"+word))
+		btn2 := tgbotapi.NewInlineKeyboardButtonData("I don't know", fmt.Sprintf("i_don't_know"+word))
+
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(btn1, btn2),
+		)
+
+		msg := tgbotapi.NewMessage(chatID, word)
+
+		msg.ReplyMarkup = keyboard
+		t.botTg.Send(msg)
+	}
+
+	return err
 }
 
 /*				case "choose_set":
 					logrus.Info("choose_set")
 					user.FSM.Event(t.ctx, "waiting_for_choosing_set")
 
-					topics, err := t.usecases.TopicsList(chatID)
+					topics, err := t.usecases.SetsList(chatID)
 					if err != nil {
 						logrus.Errorf("ERR choosing topic")
 						msg := tgbotapi.NewMessage(chatID, "There is no such set ")
@@ -339,7 +384,7 @@ func (t *TgBot) GetWordsBySetName(chatID int64, user *User, setName string) ([]s
 							TgId:  update.Message.From.ID,
 						}
 
-						_, err := t.usecases.ChooseTopic(data)
+						_, err := t.usecases.WordsBySetName(data)
 						if err != nil {
 							logrus.Info("")
 							return nil, err
@@ -374,11 +419,11 @@ func (t *TgBot) GetWordsBySetName(chatID int64, user *User, setName string) ([]s
 	}
 */
 /*	stats, err := t.StatsForTg(addr)
-						if err != nil {
-							logrus.Infof("ERR getting stats: fro tg")
-						}
+							if err != nil {
+								logrus.Infof("ERR getting stats: fro tg")
+							}
 
-						confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Your stats:\n "+stats)
-						t.BotTg.Send(confirmationMsg)
-/*
-						delete(userStates, update.Message.Chat.ID)*/
+							confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Your stats:\n "+stats)
+							t.BotTg.Send(confirmationMsg)
+	/*
+							delete(userStates, update.Message.Chat.ID)*/

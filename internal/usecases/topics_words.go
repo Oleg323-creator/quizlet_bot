@@ -17,10 +17,10 @@ func (u *TopicsAndWordsUsecases) AddTopic(topic db_models.Topics, words []db_mod
 	return u.repo.AddTopic(topic, words)
 }
 
-func (u *TopicsAndWordsUsecases) ChooseTopic(data db_models.Topics) ([]string, error) {
-	return u.repo.ChooseTopic(data)
+func (u *TopicsAndWordsUsecases) WordsBySetName(data db_models.Topics) ([]string, error) {
+	return u.repo.WordsBySetName(data)
 }
 
-func (u *TopicsAndWordsUsecases) TopicsList(tgId int64) ([]string, error) {
-	return u.repo.TopicsList(tgId)
+func (u *TopicsAndWordsUsecases) SetsList(tgId int64) ([]string, error) {
+	return u.repo.SetsList(tgId)
 }

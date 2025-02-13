@@ -17,8 +17,8 @@ type UsersRepository interface {
 
 type TopicsAndWordsRepository interface {
 	AddTopic(topic db_models.Topics, words []db_models.Words) error
-	ChooseTopic(data db_models.Topics) ([]string, error)
-	TopicsList(tgId int64) ([]string, error)
+	WordsBySetName(data db_models.Topics) ([]string, error)
+	SetsList(tgId int64) ([]string, error)
 }
 
 type ManagerRepo struct {
