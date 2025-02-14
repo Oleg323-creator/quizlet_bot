@@ -101,7 +101,8 @@ func (t *TgBot) NewUserFSM() *User {
 				{Name: "choose_starting_option", Src: []string{"start"}, Dst: "waiting_for_starting_option"},
 
 				{Name: "choose_set", Src: []string{"waiting_for_starting_option"}, Dst: "waiting_for_choosing_set"},
-				{Name: "working_with_set", Src: []string{"waiting_for_choosing_set"}, Dst: "working_with_set"},
+				{Name: "test_preparation", Src: []string{"waiting_for_choosing_set"}, Dst: "test_preparation"},
+				{Name: "working_with_set", Src: []string{"test_preparation"}, Dst: "working_with_set"},
 
 				{Name: "create_set", Src: []string{"waiting_for_starting_option"}, Dst: "waiting_for_starting_creating"},
 				{Name: "enter_set_name", Src: []string{"waiting_for_starting_creating"}, Dst: "waiting_for_entering_name"},
@@ -147,13 +148,10 @@ func (t *TgBot) handleUserResponse(chatID int64, user *User, text string) {
 		}
 
 	case strings.HasPrefix(text, "set_was_chosen"):
-		err := t.WordsBySetName(chatID, user, text)
-		if err != nil {
-			logrus.Error(err)
-		}
+		t.TestPreparation(chatID, user, text)
 
-	case strings.HasPrefix(text, "i"):
-		err := t.WordsBySetName(chatID, user, text)
+	case strings.HasPrefix(text, "ready") || strings.HasPrefix(text, "i"):
+		err := t.WorkingWithSet(chatID, user, text)
 		if err != nil {
 			logrus.Error(err)
 		}
@@ -233,28 +231,168 @@ func (t *TgBot) ChooseSetUserResponse(chatID int64, user *User) error {
 	return nil
 }
 
-func (t *TgBot) WordsBySetName(chatID int64, user *User, callback string) error {
+func (t *TgBot) TestPreparation(chatID int64, user *User, callback string) {
+	logrus.Info("test_preparation")
+
+	user.FSM.Event(t.ctx, "test_preparation")
+
+	setName := strings.TrimPrefix(callback, "set_was_chosen")
+
+	btn := tgbotapi.NewInlineKeyboardButtonData("Ready", fmt.Sprintf("ready"+setName))
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(btn),
+	)
+
+	msg := tgbotapi.NewMessage(chatID, "Ready?")
+
+	msg.ReplyMarkup = keyboard
+	t.botTg.Send(msg)
+}
+
+func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error {
 	logrus.Info("working_with_set")
-
-	var setName string
-	/*
-		if strings.HasPrefix(callback, "i_know") {
-			setName = strings.TrimPrefix(callback, "i_know")
-		} else if strings.HasPrefix(callback, "i_don't_know") {
-			setName = strings.TrimPrefix(callback, "i_don't_know")
-		}
-	*/
-
-	setName = strings.TrimPrefix(callback, "set_was_chosen")
 
 	user.FSM.Event(t.ctx, "working_with_set")
 
-	data := db_models.Topics{Topic: setName, TgId: chatID}
-	words, err := t.usecases.WordsBySetName(data)
+	topics, err := t.usecases.SetsList(chatID)
 	if err != nil {
+		logrus.Errorf("ERR choosing topic")
 		return err
 	}
 
+	var choosenSet string
+	for _, topic := range topics {
+		logrus.Info("1")
+		if strings.HasSuffix(callback, topic) {
+			logrus.Info("2")
+			choosenSet = topic
+			break
+		} else {
+			logrus.Errorf("ERR GETTING TOPIC")
+		}
+	}
+
+	if strings.HasPrefix(callback, "ready") {
+		logrus.Info("3")
+		setName := strings.TrimPrefix(callback, "ready")
+
+		data := db_models.Topics{Topic: setName, TgId: chatID}
+		words, err := t.usecases.WordsBySetName(data)
+		if err != nil {
+			return err
+		}
+		logrus.Info(words)
+
+		btn1 := tgbotapi.NewInlineKeyboardButtonData("I know", fmt.Sprintf("i_know"+words[0]+setName))
+		btn2 := tgbotapi.NewInlineKeyboardButtonData("I don't know", fmt.Sprintf("i_don't_know"+words[0]+setName))
+
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(btn1, btn2),
+		)
+
+		msg := tgbotapi.NewMessage(chatID, words[0])
+
+		msg.ReplyMarkup = keyboard
+		t.botTg.Send(msg)
+
+	} else if strings.HasPrefix(callback, "i_know") {
+		logrus.Info("4")
+		wordAnswer := strings.TrimPrefix(callback, "i_know")
+		wordAnswer = strings.TrimSuffix(wordAnswer, choosenSet)
+
+		data := db_models.Topics{Topic: choosenSet, TgId: chatID}
+
+		words, err := t.usecases.WordsBySetName(data)
+		if err != nil {
+			return err
+		}
+		logrus.Info(words)
+
+		for i, word := range words {
+			if wordAnswer == word {
+				logrus.Info("5")
+				if i == len(words)-1 {
+					logrus.Info("Stats:")
+					msg := tgbotapi.NewMessage(chatID, "Your stats:")
+					t.botTg.Send(msg)
+
+					break
+				}
+				btn1 := tgbotapi.NewInlineKeyboardButtonData("I know", fmt.Sprintf("i_know"+words[i+1]+choosenSet))
+				btn2 := tgbotapi.NewInlineKeyboardButtonData("I don't know", fmt.Sprintf("i_don't_know"+words[i+1]+choosenSet))
+
+				keyboard := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(btn1, btn2),
+				)
+
+				msg := tgbotapi.NewMessage(chatID, words[i+1])
+
+				logrus.Info(i + 1)
+
+				msg.ReplyMarkup = keyboard
+				t.botTg.Send(msg)
+				break
+			} else {
+				logrus.Info(callback)
+				logrus.Info(choosenSet)
+				logrus.Info("NO WORD!!!")
+			}
+		}
+	} else if strings.HasPrefix(callback, "i_don't_know") {
+		logrus.Info("6")
+
+		wordAnswer := strings.TrimPrefix(callback, "i_don't_know")
+		wordAnswer = strings.TrimSuffix(wordAnswer, choosenSet)
+
+		data := db_models.Topics{Topic: choosenSet, TgId: chatID}
+
+		words, err := t.usecases.WordsBySetName(data)
+		if err != nil {
+			return err
+		}
+		logrus.Info(words)
+
+		for i, word := range words {
+			logrus.Info("7")
+			if wordAnswer == word {
+				logrus.Info("8")
+
+				if i == len(words)-1 {
+					logrus.Info("Stats:")
+					msg := tgbotapi.NewMessage(chatID, "Your stats:")
+					t.botTg.Send(msg)
+
+					break
+				}
+
+				btn1 := tgbotapi.NewInlineKeyboardButtonData("I know", fmt.Sprintf("i_know"+words[i+1]+choosenSet))
+				btn2 := tgbotapi.NewInlineKeyboardButtonData("I don't know", fmt.Sprintf("i_don't_know"+words[i+1]+choosenSet))
+
+				keyboard := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(btn1, btn2),
+				)
+
+				msg := tgbotapi.NewMessage(chatID, words[i+1])
+
+				logrus.Info(i + 1)
+
+				msg.ReplyMarkup = keyboard
+				t.botTg.Send(msg)
+				logrus.Info("9")
+				break
+			} else {
+				logrus.Info(callback)
+				logrus.Info(wordAnswer)
+				logrus.Info(words)
+				logrus.Info("NO WORD!!!")
+			}
+		}
+	}
+	return nil
+}
+
+/*
 	for _, word := range words {
 		btn1 := tgbotapi.NewInlineKeyboardButtonData("I know", fmt.Sprintf("i_know"+word))
 		btn2 := tgbotapi.NewInlineKeyboardButtonData("I don't know", fmt.Sprintf("i_don't_know"+word))
@@ -268,9 +406,7 @@ func (t *TgBot) WordsBySetName(chatID int64, user *User, callback string) error 
 		msg.ReplyMarkup = keyboard
 		t.botTg.Send(msg)
 	}
-
-	return err
-}
+*/
 
 /*				case "choose_set":
 					logrus.Info("choose_set")

@@ -121,7 +121,7 @@ func (r *TopicsAndWordsPostgres) WordsBySetName(data db_models.Topics) ([]string
 	defer rows.Close()
 
 	var words []string
-	if rows.Next() {
+	for rows.Next() {
 		var word string
 		if err = rows.Scan(&word); err != nil {
 			logrus.Errorf("ERR to scan result: %v", err)
@@ -134,6 +134,8 @@ func (r *TopicsAndWordsPostgres) WordsBySetName(data db_models.Topics) ([]string
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
+
+	logrus.Infof("WORRRRRRDSSS: %s", words)
 
 	return words, nil
 }
