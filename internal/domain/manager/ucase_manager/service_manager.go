@@ -7,24 +7,31 @@ import (
 	"quizlet_bot/internal/usecases"
 )
 
-type Users interface {
+type UsersUsecases interface {
 	AddUser(user *tgbotapi.User) error
 }
 
-type TopicsAndWords interface {
+type TopicsAndWordsUsecases interface {
 	AddTopic(topic db_models.Topics, words []db_models.Words) error
 	WordsBySetName(data db_models.Topics) ([]string, error)
 	SetsList(tgId int64) ([]string, error)
 }
 
+type StatsUsecases interface {
+	AddStats(tgId int64) error
+	GetStats(tgId int64) (int64, error)
+}
+
 type ManagerUsecases struct {
-	Users
-	TopicsAndWords
+	UsersUsecases
+	TopicsAndWordsUsecases
+	StatsUsecases
 }
 
 func NewManagerUsecases(repo *repo_manager.ManagerRepo) *ManagerUsecases {
 	return &ManagerUsecases{
-		Users:          usecases.NewUsersUsecases(repo.UsersRepository),
-		TopicsAndWords: usecases.NewTopicsAndWordsUsecases(repo.TopicsAndWordsRepository),
+		UsersUsecases:          usecases.NewUsersUsecases(repo.UsersRepository),
+		TopicsAndWordsUsecases: usecases.NewTopicsAndWordsUsecases(repo.TopicsAndWordsRepository),
+		StatsUsecases:          usecases.NewStatsUsecases(repo.StatsRepository),
 	}
 }

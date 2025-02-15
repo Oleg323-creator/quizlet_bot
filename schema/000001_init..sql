@@ -21,7 +21,6 @@ create table if not exists words(
 create table if not exists stats(
     id serial primary key unique,
     user_id integer references users(id) on delete cascade,
-    topic_id integer references topics(id) on delete cascade,
     stats integer
 );
 

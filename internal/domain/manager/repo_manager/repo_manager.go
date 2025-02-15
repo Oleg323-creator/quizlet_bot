@@ -21,10 +21,16 @@ type TopicsAndWordsRepository interface {
 	SetsList(tgId int64) ([]string, error)
 }
 
+type StatsRepository interface {
+	AddStats(tgId int64) error
+	GetStats(tgId int64) (int64, error)
+}
+
 type ManagerRepo struct {
 	Migrator
 	UsersRepository
 	TopicsAndWordsRepository
+	StatsRepository
 }
 
 func NewManagerRepo(db *db.WrapperDB) *ManagerRepo {
@@ -32,5 +38,6 @@ func NewManagerRepo(db *db.WrapperDB) *ManagerRepo {
 		Migrator:                 postgres.NewMigratorPostgres(db),
 		UsersRepository:          postgres.NewUsersPostgres(db),
 		TopicsAndWordsRepository: postgres.NewTopicsAndWordsPostgres(db),
+		StatsRepository:          postgres.NewStatsPostgres(db),
 	}
 }
