@@ -6,18 +6,18 @@ import (
 )
 
 type TopicsAndWordsUsecases struct {
-	repo repo_manager.TopicsAndWordsRepository
+	repo repo_manager.TopicsRepository
 }
 
-func NewTopicsAndWordsUsecases(repo repo_manager.TopicsAndWordsRepository) *TopicsAndWordsUsecases {
+func NewTopicsAndWordsUsecases(repo repo_manager.TopicsRepository) *TopicsAndWordsUsecases {
 	return &TopicsAndWordsUsecases{repo: repo}
 }
 
-func (u *TopicsAndWordsUsecases) AddTopic(topic db_models.Topics, words []db_models.Words) error {
+func (u *TopicsAndWordsUsecases) AddTopic(topic db_models.Sets, words []db_models.Words) error {
 	return u.repo.AddTopic(topic, words)
 }
 
-func (u *TopicsAndWordsUsecases) WordsBySetName(data db_models.Topics) ([]string, error) {
+func (u *TopicsAndWordsUsecases) WordsBySetName(data db_models.Sets) ([]string, error) {
 	return u.repo.WordsBySetName(data)
 }
 

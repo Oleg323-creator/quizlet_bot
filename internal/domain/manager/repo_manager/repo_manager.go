@@ -15,10 +15,17 @@ type UsersRepository interface {
 	AddUser(data db_models.Users) error
 }
 
-type TopicsAndWordsRepository interface {
-	AddTopic(topic db_models.Topics, words []db_models.Words) error
-	WordsBySetName(data db_models.Topics) ([]string, error)
+type TopicsRepository interface {
+	AddSet(topic db_models.Sets) error
 	SetsList(tgId int64) ([]string, error)
+}
+
+type WordsRepository interface {
+	AddWord(data db_models.Words) error
+	GetWordsBySet(setName string) ([]string, error)
+	GetTranslationBySet(setName string) ([]string, error)
+	GetWordsByUser(tgId int64) ([]string, error)
+	GetTranslationByUser(tgId int64) ([]string, error)
 }
 
 type StatsRepository interface {
@@ -29,15 +36,17 @@ type StatsRepository interface {
 type ManagerRepo struct {
 	Migrator
 	UsersRepository
-	TopicsAndWordsRepository
+	TopicsRepository
+	WordsRepository
 	StatsRepository
 }
 
 func NewManagerRepo(db *db.WrapperDB) *ManagerRepo {
 	return &ManagerRepo{
-		Migrator:                 postgres.NewMigratorPostgres(db),
-		UsersRepository:          postgres.NewUsersPostgres(db),
-		TopicsAndWordsRepository: postgres.NewTopicsAndWordsPostgres(db),
-		StatsRepository:          postgres.NewStatsPostgres(db),
+		Migrator:         postgres.NewMigratorPostgres(db),
+		UsersRepository:  postgres.NewUsersPostgres(db),
+		TopicsRepository: postgres.NewTopicsPostgres(db),
+		WordsRepository:  postgres.NewWordsPostgres(db),
+		StatsRepository:  postgres.NewStatsPostgres(db),
 	}
 }

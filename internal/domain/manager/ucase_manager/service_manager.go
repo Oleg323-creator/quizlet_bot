@@ -12,8 +12,8 @@ type UsersUsecases interface {
 }
 
 type TopicsAndWordsUsecases interface {
-	AddTopic(topic db_models.Topics, words []db_models.Words) error
-	WordsBySetName(data db_models.Topics) ([]string, error)
+	AddTopic(topic db_models.Sets, words []db_models.Words) error
+	WordsBySetName(data db_models.Sets) ([]string, error)
 	SetsList(tgId int64) ([]string, error)
 }
 
@@ -31,7 +31,7 @@ type ManagerUsecases struct {
 func NewManagerUsecases(repo *repo_manager.ManagerRepo) *ManagerUsecases {
 	return &ManagerUsecases{
 		UsersUsecases:          usecases.NewUsersUsecases(repo.UsersRepository),
-		TopicsAndWordsUsecases: usecases.NewTopicsAndWordsUsecases(repo.TopicsAndWordsRepository),
+		TopicsAndWordsUsecases: usecases.NewTopicsAndWordsUsecases(repo.TopicsRepository),
 		StatsUsecases:          usecases.NewStatsUsecases(repo.StatsRepository),
 	}
 }

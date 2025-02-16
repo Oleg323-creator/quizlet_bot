@@ -22,8 +22,6 @@ func (t *TgBot) Bot() (*tgbotapi.BotAPI, error) {
 
 	commands := []tgbotapi.BotCommand{
 		{Command: "start", Description: "Start the bot"},
-		{Command: "choose_set", Description: "Choose set"},
-		{Command: "create_set", Description: "Create set"},
 	}
 
 	config := tgbotapi.NewSetMyCommands(commands...)
@@ -213,7 +211,7 @@ func (t *TgBot) ChooseSetUserResponse(chatID int64, user *User) error {
 
 		if len(btnsInRowSlice) > 3 {
 			keyboardSlice = append(keyboardSlice, btnsInRowSlice)
-			btnsInRowSlice = nil // Очищаем строку кнопок
+			btnsInRowSlice = nil
 		}
 	}
 
@@ -274,10 +272,10 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 	}
 
 	if strings.HasPrefix(callback, "ready") {
-		logrus.Info("3")
+		logrus.Info("34")
 		setName := strings.TrimPrefix(callback, "ready")
 
-		data := db_models.Topics{Topic: setName, TgId: chatID}
+		data := db_models.Sets{SetName: setName, TgId: chatID}
 		words, err := t.usecases.WordsBySetName(data)
 		if err != nil {
 			return err
@@ -298,10 +296,17 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 
 	} else if strings.HasPrefix(callback, "i_know") {
 		logrus.Info("4")
+
+		err = t.usecases.AddStats(chatID)
+		if err != nil {
+			logrus.Errorf("ERR adding stats: %v", err)
+			return err
+		}
+
 		wordAnswer := strings.TrimPrefix(callback, "i_know")
 		wordAnswer = strings.TrimSuffix(wordAnswer, choosenSet)
 
-		data := db_models.Topics{Topic: choosenSet, TgId: chatID}
+		data := db_models.Sets{SetName: choosenSet, TgId: chatID}
 
 		words, err := t.usecases.WordsBySetName(data)
 		if err != nil {
@@ -312,9 +317,17 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 		for i, word := range words {
 			if wordAnswer == word {
 				logrus.Info("5")
+				logrus.Info(i)
 				if i == len(words)-1 {
-					logrus.Info("Stats:")
-					msg := tgbotapi.NewMessage(chatID, "Your stats:")
+					logrus.Info(i)
+					stats, err := t.usecases.GetStats(chatID)
+					if err != nil {
+						logrus.Infof("ERR getting stats: %v", err)
+						return err
+					}
+
+					logrus.Infof("Stats: %d from %d", stats, len(words))
+					msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Stats: %d from %d", stats, len(words)))
 					t.botTg.Send(msg)
 
 					break
@@ -328,13 +341,13 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 
 				msg := tgbotapi.NewMessage(chatID, words[i+1])
 
-				logrus.Info(i + 1)
+				//logrus.Info(i + 1)
 
 				msg.ReplyMarkup = keyboard
 				t.botTg.Send(msg)
 				break
 			} else {
-				logrus.Info(callback)
+				logrus.Info(wordAnswer)
 				logrus.Info(choosenSet)
 				logrus.Info("NO WORD!!!")
 			}
@@ -345,7 +358,7 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 		wordAnswer := strings.TrimPrefix(callback, "i_don't_know")
 		wordAnswer = strings.TrimSuffix(wordAnswer, choosenSet)
 
-		data := db_models.Topics{Topic: choosenSet, TgId: chatID}
+		data := db_models.Sets{SetName: choosenSet, TgId: chatID}
 
 		words, err := t.usecases.WordsBySetName(data)
 		if err != nil {
@@ -358,9 +371,17 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 			if wordAnswer == word {
 				logrus.Info("8")
 
+				logrus.Info(i)
+
 				if i == len(words)-1 {
-					logrus.Info("Stats:")
-					msg := tgbotapi.NewMessage(chatID, "Your stats:")
+					stats, err := t.usecases.GetStats(chatID)
+					if err != nil {
+						logrus.Infof("ERR getting stats: %v", err)
+						return err
+					}
+
+					logrus.Infof("Stats: %d from %d", stats, len(words))
+					msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Stats: %d from %d", stats, len(words)))
 					t.botTg.Send(msg)
 
 					break
@@ -391,175 +412,3 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 	}
 	return nil
 }
-
-/*
-	for _, word := range words {
-		btn1 := tgbotapi.NewInlineKeyboardButtonData("I know", fmt.Sprintf("i_know"+word))
-		btn2 := tgbotapi.NewInlineKeyboardButtonData("I don't know", fmt.Sprintf("i_don't_know"+word))
-
-		keyboard := tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(btn1, btn2),
-		)
-
-		msg := tgbotapi.NewMessage(chatID, word)
-
-		msg.ReplyMarkup = keyboard
-		t.botTg.Send(msg)
-	}
-*/
-
-/*				case "choose_set":
-					logrus.Info("choose_set")
-					user.FSM.Event(t.ctx, "waiting_for_choosing_set")
-
-					topics, err := t.usecases.SetsList(chatID)
-					if err != nil {
-						logrus.Errorf("ERR choosing topic")
-						msg := tgbotapi.NewMessage(chatID, "There is no such set ")
-						t.botTg.Send(msg)
-					}
-
-					var keyboardSlice [][]tgbotapi.InlineKeyboardButton
-					var btnsInRowSlice []tgbotapi.InlineKeyboardButton
-
-					counter := 0
-					if len(topics) == 0 {
-						logrus.Errorf("LENTH IS 0")
-						continue
-					}
-					for _, topic := range topics {
-						btnsInRowSlice = append(btnsInRowSlice, tgbotapi.NewInlineKeyboardButtonData(topic, topic))
-
-						if len(btnsInRowSlice) > 3 {
-							keyboardSlice = append(keyboardSlice, btnsInRowSlice)
-							btnsInRowSlice = nil // Очищаем строку кнопок
-							counter++
-						}
-					}
-
-					keyboardSlice = append(keyboardSlice, btnsInRowSlice)
-
-					keyboard := tgbotapi.NewInlineKeyboardMarkup(keyboardSlice...)
-
-					msg := tgbotapi.NewMessage(chatID, "Choose set:")
-
-					msg.ReplyMarkup = keyboard
-					t.botTg.Send(msg)
-
-				case "help":
-					user.FSM.Event(t.ctx, "help")
-					t.botTg.Send(tgbotapi.NewMessage(chatID, "Вот инструкция по использованию бота..."))
-*/
-
-/*
-	f := fsm.NewFSM(
-		"start",
-		fsm.Events{
-			{Name: "choose_set", Src: []string{"start"}, Dst: "waiting_for_choosing_set"},
-
-			{Name: "create_set", Src: []string{"start"}, Dst: "waiting_for_starting_creating"},
-			{Name: "enter_set_name", Src: []string{"waiting_for_starting_creating"}, Dst: "waiting_for_entering_name"},
-			{Name: "add_word", Src: []string{"waiting_for_entering_name"}, Dst: "waiting_for_adding_word"},
-			{Name: "finish_creating", Src: []string{"waiting_for_adding_word"}, Dst: "start"},
-
-			{Name: "update_set", Src: []string{"start"}, Dst: "waiting_for_set_updating"},
-
-			{Name: "delete_set", Src: []string{"start"}, Dst: "waiting_for_deleting_set"},
-		},
-		fsm.Callbacks{},
-	)
-
-	for {
-		select {
-		case <-t.ctx.Done():
-			logrus.Info("Bot stopped due to context cancellation")
-			return nil, err
-		case update := <-updates:
-			if update.Message != nil {
-
-				err := t.usecases.AddUser(update.Message.From)
-				if err != nil {
-					logrus.Errorf("ERR adding uses: %v", err)
-					return nil, err
-				}
-
-				if update.Message.IsCommand() {
-					switch update.Message.Command() {
-					case "start":
-						logrus.Info("Got /start command")
-
-						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Available commands:\n"+
-							"/choose_set - Choose set\n/create_set - Create set")
-						t.botTg.Send(msg)
-					case "choose_set":
-						logrus.Info("Got /choose_set command")
-
-						userStates[update.Message.Chat.ID] = f
-
-						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Choose set")
-						t.botTg.Send(msg)
-					case "create_set":
-						logrus.Info("Got /create_set command")
-
-						userStates[update.Message.Chat.ID] = "creating_set" //saiving status
-
-						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Enter set name")
-						t.botTg.Send(msg)
-
-					default:
-						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Unknown command")
-						t.botTg.Send(msg)
-					}
-				} else if userState, exists := userStates[update.Message.Chat.ID]; exists {
-					if userState == "choosing_set" {
-						set := update.Message.Text
-						logrus.Infof("Set chousen: %s", set)
-
-						data := db_models.Topics{
-							Topic: set,
-							TgId:  update.Message.From.ID,
-						}
-
-						_, err := t.usecases.WordsBySetName(data)
-						if err != nil {
-							logrus.Info("")
-							return nil, err
-						}
-
-						/*	if len(addr) != 34 {
-							confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Incorrect address")
-							t.botTg.Send(confirmationMsg)
-							continue
-						}*/
-/*
-	} else if userState == "creating_set" {
-		//set := update.Message.Text
-
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
-			"Add words to the set(word-translate)")
-
-		keyboard := tgbotapi.NewReplyKeyboard(
-			tgbotapi.NewKeyboardButtonRow(
-				tgbotapi.NewKeyboardButton("Add word"),
-				tgbotapi.NewKeyboardButton("Finish creating"),
-				tgbotapi.NewKeyboardButton("Cancel"),
-			))
-		msg.ReplyMarkup = keyboard
-		t.botTg.Send(msg)
-
-		userStates[update.Message.Chat.ID] = "adding words"
-		if userState == "adding words" {
-
-		}
-
-	}
-*/
-/*	stats, err := t.StatsForTg(addr)
-							if err != nil {
-								logrus.Infof("ERR getting stats: fro tg")
-							}
-
-							confirmationMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "Your stats:\n "+stats)
-							t.BotTg.Send(confirmationMsg)
-	/*
-							delete(userStates, update.Message.Chat.ID)*/
