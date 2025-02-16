@@ -5,7 +5,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/looplab/fsm"
 	"github.com/sirupsen/logrus"
-	"quizlet_bot/internal/domain/models/db_models"
 	"strings"
 )
 
@@ -275,8 +274,7 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 		logrus.Info("34")
 		setName := strings.TrimPrefix(callback, "ready")
 
-		data := db_models.Sets{SetName: setName, TgId: chatID}
-		words, err := t.usecases.WordsBySetName(data)
+		words, err := t.usecases.GetWordsBySet(setName)
 		if err != nil {
 			return err
 		}
@@ -306,9 +304,7 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 		wordAnswer := strings.TrimPrefix(callback, "i_know")
 		wordAnswer = strings.TrimSuffix(wordAnswer, choosenSet)
 
-		data := db_models.Sets{SetName: choosenSet, TgId: chatID}
-
-		words, err := t.usecases.WordsBySetName(data)
+		words, err := t.usecases.GetWordsBySet(choosenSet)
 		if err != nil {
 			return err
 		}
@@ -358,9 +354,7 @@ func (t *TgBot) WorkingWithSet(chatID int64, user *User, callback string) error 
 		wordAnswer := strings.TrimPrefix(callback, "i_don't_know")
 		wordAnswer = strings.TrimSuffix(wordAnswer, choosenSet)
 
-		data := db_models.Sets{SetName: choosenSet, TgId: chatID}
-
-		words, err := t.usecases.WordsBySetName(data)
+		words, err := t.usecases.GetWordsBySet(choosenSet)
 		if err != nil {
 			return err
 		}

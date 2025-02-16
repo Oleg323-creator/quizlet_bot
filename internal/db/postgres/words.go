@@ -56,7 +56,7 @@ func (r *WordsPostgres) AddWord(data db_models.Words) error {
 	return nil
 }
 
-func (r *TopicsPostgres) GetWordsBySet(setName string) ([]string, error) {
+func (r *WordsPostgres) GetWordsBySet(setName string) ([]string, error) {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	query, args, err := sq.Select("word").
@@ -118,7 +118,7 @@ func (r *TopicsPostgres) GetWordsBySet(setName string) ([]string, error) {
 	return words, nil
 }
 
-func (r *TopicsPostgres) GetTranslationBySet(setName string) ([]string, error) {
+func (r *WordsPostgres) GetTranslationBySet(setName string) ([]string, error) {
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	query, args, err := sq.Select("translation").
@@ -168,7 +168,7 @@ func (r *TopicsPostgres) GetTranslationBySet(setName string) ([]string, error) {
 	return translations, nil
 }
 
-func (r *TopicsPostgres) GetWordsByUser(tgId int64) ([]string, error) {
+func (r *WordsPostgres) GetWordsByUser(tgId int64) ([]string, error) {
 
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
@@ -219,7 +219,7 @@ func (r *TopicsPostgres) GetWordsByUser(tgId int64) ([]string, error) {
 	return words, nil
 }
 
-func (r *TopicsPostgres) GetTranslationByUser(tgId int64) ([]string, error) {
+func (r *WordsPostgres) GetTranslationByUser(tgId int64) ([]string, error) {
 
 	sq := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
